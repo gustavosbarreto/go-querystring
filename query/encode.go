@@ -111,6 +111,10 @@ type Encoder interface {
 // Multiple fields that encode to the same URL parameter name will be included
 // as multiple URL values of the same name.
 func Values(v interface{}) (url.Values, error) {
+	return ValuesWithTag(v, "url")
+}
+
+func ValuesWithTag(v interface{}, tagName string) (url.Values, error) {
 	values := make(url.Values)
 	val := reflect.ValueOf(v)
 	for val.Kind() == reflect.Ptr {
@@ -125,17 +129,17 @@ func Values(v interface{}) (url.Values, error) {
 	}
 
 	if val.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("query: Values() expects struct input. Got %v", val.Kind())
+		return nil, fmt.Errorf("query: ValuesWithTag() expects struct input. Got %v", val.Kind())
 	}
 
-	err := reflectValue(values, val, "")
+	err := reflectValue(values, val, "", tagName)
 	return values, err
 }
 
 // reflectValue populates the values parameter from the struct fields in val.
 // Embedded structs are followed recursively (using the rules defined in the
 // Values function documentation) breadth-first.
-func reflectValue(values url.Values, val reflect.Value, scope string) error {
+func reflectValue(values url.Values, val reflect.Value, scope, tagName string) error {
 	var embedded []reflect.Value
 
 	typ := val.Type()
@@ -146,7 +150,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		}
 
 		sv := val.Field(i)
-		tag := sf.Tag.Get("url")
+		tag := sf.Tag.Get(tagName)
 		if tag == "-" {
 			continue
 		}
